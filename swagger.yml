@@ -1,0 +1,950 @@
+swagger: '2.0'
+info:
+  title: WFS Users API
+  description: WFS API for users management
+  version: 1.0.0
+schemes:
+  - https
+
+x-amazon-apigateway-request-validators:
+  all:
+    validateRequestBody: true
+    validateRequestParameters: true
+  params-only:
+    validateRequestBody: false
+    validateRequestParameters: true
+
+x-amazon-apigateway-request-validator: all
+
+produces:
+  - application/json
+
+paths:
+  /{opcoCode}/v1/clients:
+    get:
+      description: "Get OpCo's clients"
+      operationId: getClients
+      security:
+        - userAuthorizer: []
+      parameters:
+        -  $ref: "#/parameters/opcoCode"
+        - name: createClientRequest
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/Client"
+      tags:
+        -  clients
+      responses:
+        200:
+          description: "OK"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Client"
+          headers:
+            Content-Type:
+              type: string
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /{opcoCode}/v1/clients/{clientId}:
+    get:
+      description: "Get WFS client details. Client can have multiple portals but only one active."
+      operationId: getClientById
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - $ref: "#/parameters/clientId"
+      tags:
+        - clients
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/definitions/Client"
+          headers:
+            Content-Type:
+              type: string
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /{opcoCode}/v1/clients/{clientId}/departments:
+    get:
+      description: "Get OpCo's Client departments"
+      operationId: getClientDepartments
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - $ref: "#/parameters/clientId"
+      tags:
+        - clients
+      responses:
+        200:
+          description: "OK"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Department"
+          headers:
+            Content-Type:
+              type: string
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /{opcoCode}/v1/clients/{clientId}/employee_groups:
+    get:
+      description: "Get OpCo's Client employee groups"
+      operationId: getClientEmployeeGroups
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - $ref: "#/parameters/portalId"
+      tags:
+        - clients
+      responses:
+        200:
+          description: "OK"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/EmployeeGroup"
+          headers:
+            Content-Type:
+              type: string
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /{opcoCode}/v1/users:
+    get:
+      description: "Get OpCo's WFS users"
+      operationId: getUsers
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - name: clientId
+          in: query
+          required: false
+          type: string
+          description: "Query parameter to filter OpCo's users per given Client"
+      tags:
+        -  wfs users
+      responses:
+        200:
+          description: "OK"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/User"
+          headers:
+            Content-Type:
+              type: string
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    post:
+      description: "Create WFS user for OpCo. User will be created only if specified Client has link to Portal."
+      operationId: createUser
+      security:
+        - userAuthorizer: []
+      consumes:
+        - application/json
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - name: createUserRequest
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/CreateUserRequest"
+      tags:
+        -  wfs users
+      responses:
+        202:
+          description: "Accepted request for further processing (async)"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /{opcoCode}/v1/users/{userId}:
+    get:
+      description: "Get WFS user details"
+      operationId: getUserById
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - $ref: "#/parameters/userId"
+      tags:
+        -  wfs users
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/definitions/UserDetails"
+          headers:
+            Content-Type:
+              type: string
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    delete:
+      description: "(Soft) Delete WFS user (deactivation)"
+      operationId: deleteUser
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - $ref: "#/parameters/userId"
+      tags:
+        -  wfs users
+      responses:
+        204:
+          description: "No Content"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /{opcoCode}/v1/users/{userId}/clients:
+    get:
+      description: "Get user-client reference list"
+      operationId: getUserClientReferences
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - $ref: "#/parameters/userId"
+      tags:
+        -  wfs users
+      responses:
+        200:
+          description: "OK"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/ClientAssignment"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    patch:
+      description: "Modify user-client reference. Delete action is soft delete - it marks user as inactive for client"
+      operationId: modifyUserClientReference
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - $ref: "#/parameters/userId"
+        - name: modifyUserClientsRequest
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/ModifyUserClientsRequest"
+      tags:
+        -  wfs users
+      responses:
+        202:
+          description: "Accepted request for further processing (async)"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /{opcoCode}/v1/users/{userId}/clients/{clientId}/departments:
+    patch:
+      description: "Modify user-department reference"
+      operationId: modifyUserDepartmentReference
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - $ref: "#/parameters/userId"
+        - $ref: "#/parameters/clientId"
+        - name: modifyUserDepartmentsRequest
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/ModifyUserDepartmentsRequest"
+      tags:
+        -  wfs users
+      responses:
+        202:
+          description: "Accepted request for further processing (async)"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /{opcoCode}/v1/users/{userId}/clients/{clientId}/employee_groups:
+    patch:
+      description: "Modify user-employee group reference."
+      operationId: modifyUserEmployeeGroupReference
+      security:
+        - userAuthorizer: []
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - $ref: "#/parameters/userId"
+        - $ref: "#/parameters/clientId"
+        - name: modifyUserEmployeeGroupsRequest
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/ModifyUserEmployeeGroupsRequest"
+      tags:
+        -  wfs users
+      responses:
+        202:
+          description: "Accepted request for further processing (async)"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /{opcoCode}/v1/users/upload:
+    post:
+      description: "Batch create WFS users for OpCo. User will be created only if specified Client has link to Portal."
+      operationId: batchCreateUsers
+      security:
+        - userAuthorizer: []
+      consumes:
+        - multipart/form-data
+      parameters:
+        - $ref: "#/parameters/opcoCode"
+        - name: usersFile
+          required: true
+          description: "File with users to create"
+          type: file
+          in: formData
+          x-mimetype: text/csv
+      tags:
+        -  wfs users
+      responses:
+        202:
+          description: "Accepted request for further processing (async)"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+definitions:
+  Address:
+    type: object
+    properties:
+      street:
+        type: string
+      streetNumber:
+        type: string
+      extension:
+        type: string
+      zipCode:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      province:
+        type: string
+
+  BackendIntegration:
+    type: object
+    properties:
+      environments:
+        type: array
+        items:
+          $ref: "#/definitions/BackendIntegrationEnvironment"
+      iamIntegrationEnabled:
+        type: boolean
+
+  BackendIntegrationEnvironment:
+    type: object
+    properties:
+      stage:
+        type: string
+        enum: [DEV,TST,ACC,DEMO,PRD]
+      systems:
+        type: array
+        items:
+          $ref: "#/definitions/BackendIntegrationSystem"
+
+  BackendIntegrationSystem:
+    type: object
+    properties:
+      name:
+        type: string
+      systemType:
+        type: string
+        enum: [ATS,FRONTOFFICE,BACKOFFICE]
+      integrationPurpose:
+        type: string
+        description: "Short description of integration purpose"
+      url:
+        type: string
+
+  Client:
+    type: object
+    required:
+      - "id"
+      - "name"
+      - "opcoId"
+      - "opcoCode"
+    properties:
+      id:
+        type: string
+      opcoId:
+        type: string
+      opcoCode:
+        type: string
+      name:
+        type: string
+      isActive:
+        type: boolean
+      address:
+        $ref: "#/definitions/Address"
+      portal:
+        $ref: "#/definitions/Portal"
+      departments:
+        type: array
+        items:
+          $ref: "#/definitions/Department"
+      employeeGroups:
+        type: array
+        items:
+          $ref: "#/definitions/EmployeeGroup"
+      shiftTypes:
+        type: array
+        items:
+          $ref: "#/definitions/ShiftType"
+      timeOffTypes:
+        type: array
+        items:
+          $ref: "#/definitions/TimeOffType"
+      wfsConfiguration:
+        $ref: "#/definitions/WfsConfiguration"
+
+  ClientAssignment:
+    type: object
+    required:
+      - "clientId"
+    properties:
+      clientId:
+        type: string
+      name:
+        type: string
+      departments:
+        type: array
+        description: "Default department should be passed upon user creation. If not included, department marked as default for Client is linked to the new user."
+        items:
+          type: string
+      employeeGroups:
+        type: array
+        items:
+          type: string
+      contract:
+        $ref: "#/definitions/Contract"
+      isActive:
+        type: boolean
+
+  Contract:
+    type: object
+    properties:
+      id:
+        type: string
+      startDate:
+        type: string
+        format: date
+      endDate:
+        type: string
+        format: date
+      mimeType:
+        type: string
+      value:
+        type: string # base64 value or S3 bucket link
+      hoursPerWeek:
+        type: number
+
+  Department:
+    type: object
+    properties:
+      id:
+        type: string
+        description: "WFS unique identifier"
+      externalId:
+        type: string
+        description: "Identifier describing department in external system, e.g. Planday"
+      name:
+        type: string
+      address:
+        $ref: "#/definitions/Address"
+      isDefault:
+        type: boolean
+        description: "Default department is used for actions like user creation (if it's not defined when performing specific action"
+      wfsConfiguration:
+        $ref: "#/definitions/WfsConfiguration"
+
+  DepartmentReference:
+    $ref: "#/definitions/IdLabel"
+
+  EmployeeGroup:
+    type: object
+    required:
+      - "id"
+      - "name"
+      - "isSystemManaged"
+    properties:
+      id:
+        type: string
+        description: "WFS unique identifier"
+      externalId:
+        type: string
+        description: "Identifier describing department in external system, e.g. Planday"
+      name:
+        type: string
+      isSystemManaged:
+        type: boolean
+        description: "If Employee Group is system managed, it cannot be deleted"
+        default: false
+
+  EmployeeGroupReference:
+    $ref: "#/definitions/IdLabel"
+
+  IdLabel:
+    type: object
+    required:
+      - "entityId"
+      - "name"
+    properties:
+      entityId:
+        type: string
+      name:
+        type: string
+
+  Opco:
+    type: object
+    properties:
+      id:
+        type: string
+      code:
+        type: string
+      name:
+        type: string
+      shiftRejectionReasons:
+        type: array
+        items:
+          $ref: "#/definitions/ShiftResponseReason"
+      shiftCancellationReasons:
+        type: array
+        items:
+          $ref: "#/definitions/ShiftResponseReason"
+      timeOffTypes:
+        type: array
+        items:
+          $ref: "#/definitions/TimeOffType"
+      portalTemplate:
+        $ref: "#/definitions/PortalTemplate"
+      backendIntegration:
+        $ref: "#/definitions/BackendIntegration"
+      wfsConfiguration:
+        $ref: "#/definitions/WfsConfiguration"
+
+  Portal:
+    type: object
+    description: "Workforce Scheduling portal. Client might or might not have a link to Portal."
+    properties:
+      id:
+        type: string
+        description: "WFS unique identifier"
+      externalId:
+        type: string
+        description: "Identifier describing portal in external system, e.g. Planday"
+      name:
+        type: string
+      url:
+        type: string
+      dateCreated:
+        type: string
+        format: date
+      dateDeactivated:
+        type: string
+        format: date
+      departments:
+        type: array
+        items:
+          $ref: "#/definitions/Department"
+      employeeGroups:
+        type: array
+        items:
+          $ref: "#/definitions/EmployeeGroup"
+      isActive:
+        type: boolean
+      isMultiClient:
+        type: boolean
+        description: "True if portal is used by multiple clients"
+      clientAssignments:
+        description: "Array of Clients that Portal is linked to. Field is not added in getClientById operation. Client's portal department and employee groups list is filtered based on the client assignment (clientId mapping)"
+        type: array
+        items:
+          $ref: "#/definitions/ClientAssignment"
+      shiftApprovalType:
+        type: string
+        enum: [PICKUP,SIGNUP]
+        description: "Default mechanism of shift approval"
+      portalType:
+        type: string
+        enum: [YOUPLAN, WEPLAN]
+      shiftTypes:
+        type: array
+        items:
+          $ref: "#/definitions/ShiftType"
+      features:
+        type: array
+        items:
+          type: string
+
+  PortalTemplate:
+    type: object
+    properties:
+      features:
+        $ref: "#/definitions/StringArray"
+      defaultPermissions:
+        $ref: "#/definitions/StringArray"
+
+  ShiftResponseReason:
+    type: object
+    properties:
+      language:
+        type: string
+      values:
+        type: array
+        items:
+          $ref: "#/definitions/IdLabel"
+
+  ShiftType:
+    type: object
+    properties:
+      id:
+        type: string
+        description: "WFS unique identifier"
+      externalId:
+        type: string
+        description: "Identifier describing department in external system, e.g. Planday"
+      name:
+        type: string
+      salaryCode:
+        type: string
+      isSystemManaged:
+        type: boolean
+        description: "If Employee Group is system managed, it cannot be deleted"
+        default: false
+      systemManagedType:
+        type: string
+        enum: [SICK,BUSY,CANCEL]
+
+  StringArray:
+    type: array
+    items:
+      type: string
+
+  TimeOffType:
+    type: object
+    properties:
+      id:
+        type: string
+        description: "WFS unique identifier"
+      externalId:
+        type: string
+        description: "Identifier describing department in external system, e.g. global Time Off module"
+      isDefault:
+        type: boolean
+      isSystemManaged:
+        type: boolean
+        default: false
+
+  TrainingCertificate:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      startDate:
+        type: string
+        format: date
+      endDate:
+        type: string
+        format: date
+      mimeType:
+        type: string
+      value:
+        type: string # base64 value or S3 bucket link
+      expirationDate:
+        type: string
+        format: date
+
+  UserDetails:
+    type: object
+    allOf:
+      - $ref: "#/definitions/User"
+    properties:
+      preferredUserName:
+        type: string
+      drivingLicense:
+        type: array
+        items:
+          type: object
+          properties:
+            startDate:
+              type: string
+              format: date
+            endDate:
+              type: string
+              format: date
+            licenseType:
+              type: string
+      trainingCertificates:
+        type: array
+        items:
+          $ref: "#/definitions/TrainingCertificate"
+      photo:
+        type: object
+        properties:
+          mimeType:
+            type: string
+          value:
+            type: string # base64 value or S3 bucket link
+      preferences:
+        $ref: "#/definitions/UserPreferences"
+      documents:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              description: "WFS unique identifier"
+            externalId:
+              type: string
+              description: "Identifier describing department in external system, e.g. Planday"
+            mimeType:
+              type: string
+            value:
+              type: string # base64 value or S3 bucket link
+
+  User:
+    type: object
+    properties:
+      id:  # IAM_id if IAM enabled
+        type: string
+      givenName:
+        type: string
+      familyName:
+        type: string
+      middleName:
+        type: string
+      isActive:
+        type: boolean
+      email:
+        type: string
+      emailVerified:
+        type: boolean
+      phoneNumber:
+        type: string
+      phoneNumberVerified:
+        type: boolean
+      opcoUserId:
+        type: string
+      accountType:
+        type: string
+        enum: [PERMANENT,TEMPORARY,ADMIN] # possible to add other values
+      opcoId:
+        type: string
+      opcoCode:
+        type: string
+      skills:
+        type: array
+        items:
+          type: string # or object?
+      dateOfBirth:
+        type: string
+        format: date
+      gender:
+        type: string
+        enum: [MALE,FEMALE]
+      address:
+        $ref: "#/definitions/Address"
+      taxNumber:
+        type: string
+      clients:
+        type: array
+        items:
+          $ref: "#/definitions/ClientAssignment"
+      wfsConfiguration:
+        $ref: "#/definitions/WfsConfiguration"
+
+  UserPreferences:
+    type: object
+    properties:
+      notifications:
+        type: object
+        properties:
+          notificationType:
+            type: string
+            enum: [EMAIL,SMS,PUSH]
+      locale:
+        type: string
+
+  WfsConfiguration:
+    type: object
+    description: "This settings can be placed on multiple levels. The order priority is as follows: Department (if congifuration differs from Client) -> Client (if no configuration for Department) -> User (if no configuration for Department and Client) -> OpCo"
+    properties:
+      canRejectOpenShift:
+        type: boolean
+        description: "States if user can reject open shifts"
+      canRejectAssignedShift:
+        type: boolean
+        description: "States if user can reject assigned shifts"
+      canCancelShift:
+        type: boolean
+        description: "States if user can cancel shifts"
+      shouldfUserConfirmShift:
+        type: boolean
+        description: "If false, shift is automatically confirmed by WFS system"
+
+  CreateUserRequest:
+    type: object
+    required:
+      - "firstName"
+      - "lastName"
+      - "clients"
+    properties:
+      opcoUserId:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      clients:
+        description: "For user creation, only Clients that are linked to Portal are taken into consideration"
+        type: array
+        items:
+          $ref: "#/definitions/ClientAssignment"
+
+  ModifyClientPortalsRequest:
+    type: object
+    properties:
+      creates:
+        type: array
+        items:
+          $ref: "#/definitions/IdLabel"
+      deletes:
+        type: array
+        items:
+          $ref: "#/definitions/IdLabel"
+
+  ModifyUserClientsRequest:
+    type: object
+    properties:
+      creates:
+        type: array
+        items:
+          $ref: "#/definitions/IdLabel"
+      deletes:
+        type: array
+        items:
+          $ref: "#/definitions/IdLabel"
+
+  ModifyUserDepartmentsRequest:
+    type: object
+    properties:
+      creates:
+        type: array
+        items:
+          $ref: "#/definitions/DepartmentReference"
+      deletes:
+        type: array
+        items:
+          $ref: "#/definitions/DepartmentReference"
+
+  ModifyUserEmployeeGroupsRequest:
+    type: object
+    properties:
+      creates:
+        type: array
+        items:
+          $ref: "#/definitions/EmployeeGroupReference"
+      deletes:
+        type: array
+        items:
+          $ref: "#/definitions/EmployeeGroupReference"
+
+  Response:
+    type: object
+    properties:
+      message:
+        type: string
+
+  ErrorResponse:
+    type: object
+    allOf:
+      - $ref: "#/definitions/Response"
+    properties:
+      code:
+        type: string
+      details:
+        type: object
+
+securityDefinitions:
+  userAuthorizer:
+    type: apiKey
+    name: Unused
+    in: header
+    x-amazon-apigateway-authtype: custom
+    x-amazon-apigateway-authorizer:
+      authorizerUri:
+        Fn::Sub:
+          - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiUserAuthorizerV1}/invocations"
+          - ApiUserAuthorizerV1:
+              Fn::ImportValue:
+                Fn::Sub: "ApiUserAuthorizer-${ProjectCountry}-${Environment}-mra-output"
+      authorizerResultTtlInSeconds: 300
+      authorizerCredentials:
+        Fn::Sub: "arn:aws:iam::${AWS::AccountId}:role/rol-diy-df-${EnvironmentDataFactory}-${ProjectCountry}-${ProjectIamRole}"
+      identitySource: 'method.request.header.clientId, method.request.header.clientSecret, method.request.header.idToken'
+      type: request
+
+parameters:
+  opcoCode:
+    type: string
+    in: path
+    required: true
+    name: opcoCode
+  userId:
+    type: string
+    in: path
+    required: true
+    name: userId
+  clientId:
+    in: path
+    name: clientId
+    required: true
+    type: string
+  portalId:
+    in: path
+    name: portalId
+    required: true
+    type: string
